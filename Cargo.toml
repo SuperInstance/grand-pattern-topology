@@ -1,0 +1,9 @@
+[package]
+name = "grand-pattern-topology"
+version = "0.1.0"
+edition = "2021"
+description = "Topology sweep — finding the sweet spot between star speed and mesh robustness"
+
+[[bin]]
+name = "sweep"
+path = "src/main.rs"

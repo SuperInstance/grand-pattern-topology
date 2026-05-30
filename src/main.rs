@@ -167,8 +167,8 @@ pub fn scale_free(n: usize, m: usize, seed: u64) -> Graph {
     }
     // Degree tracker for preferential attachment
     let mut degrees = vec![0usize; n];
-    for i in 0..=m {
-        degrees[i] = g.degree(i);
+    for (i, d) in degrees.iter_mut().enumerate().take(m + 1) {
+        *d = g.degree(i);
     }
     let mut total_degree: usize = degrees.iter().sum();
 
@@ -249,25 +249,9 @@ impl Simulation {
 
     pub fn step(&mut self) {
         let n = self.graph.n;
+        // Standard heat equation: new_vibe[i] = vibe[i] + rate * sum(vibe[j] - vibe[i])
         let mut new_vibes = self.vibes.clone();
-        for i in 0..n {
-            let neighbors = &self.graph.neighbors[i];
-            if neighbors.is_empty() {
-                continue;
-            }
-            // Diffusion: each neighbor pulls toward average
-            let avg_neighbor: f64 = neighbors.iter().map(|&j| self.vibes[j]).sum::<f64>() / neighbors.len() as f64;
-            let diff = avg_neighbor - self.vibes[i];
-            // Damping: diffusion_rate / degree_count — more neighbors = more damping per-link
-            let effective_rate = self.diffusion_rate / neighbors.len() as f64;
-            new_vibes[i] += effective_rate * diff * neighbors.len() as f64;
-            // Actually, let's use a cleaner model: standard heat equation
-            // new_vibe[i] = vibe[i] + rate * sum(vibe[j] - vibe[i]) for j in neighbors
-            // This naturally handles degree
-        }
-        // Redo with cleaner model
-        let mut new_vibes2 = self.vibes.clone();
-        for i in 0..n {
+        for (i, nv) in new_vibes.iter_mut().enumerate().take(n) {
             let neighbors = &self.graph.neighbors[i];
             if neighbors.is_empty() {
                 continue;
@@ -276,9 +260,9 @@ impl Simulation {
             for &j in neighbors {
                 delta += self.vibes[j] - self.vibes[i];
             }
-            new_vibes2[i] += self.diffusion_rate * delta;
+            *nv += self.diffusion_rate * delta;
         }
-        self.vibes = new_vibes2;
+        self.vibes = new_vibes;
 
         // Update JEPA (exponential moving average)
         for i in 0..n {
@@ -423,9 +407,9 @@ pub fn robustness_measure(graph: &Graph, initial_vibes: &[f64], diffusion_rate: 
 fn remap_graph(graph: &Graph, removed: usize) -> Graph {
     let mut mapping = vec![0; graph.n];
     let mut idx = 0;
-    for i in 0..graph.n {
+    for (i, m) in mapping.iter_mut().enumerate().take(graph.n) {
         if i != removed {
-            mapping[i] = idx;
+            *m = idx;
             idx += 1;
         }
     }
